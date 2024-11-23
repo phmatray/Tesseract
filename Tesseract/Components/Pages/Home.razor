@@ -1,25 +1,100 @@
 ﻿@page "/"
 @inject IHypercubeGenerator HypercubeGenerator
 @inject IProjectionService ProjectionService
+@inject IRotationService RotationService
 
-<h3>4D Hypercube Visualization</h3>
+<h3>4D Hypercube Visualization with Rotation</h3>
+
+<div>
+    <label>XW Rotation:</label>
+    <input type="range" min="0" max="6.28" step="0.01" @bind="AngleXW" />
+</div>
+<div>
+    <label>YW Rotation:</label>
+    <input type="range" min="0" max="6.28" step="0.01" @bind="AngleYW" />
+</div>
+<div>
+    <label>ZW Rotation:</label>
+    <input type="range" min="0" max="6.28" step="0.01" @bind="AngleZW" />
+</div>
+
 <BECanvas Width="800" Height="600" @ref="_canvasReference"></BECanvas>
 
 @code {
-  private Canvas2DContext? _context;
-  private BECanvasComponent? _canvasReference;
-  private ICanvasDrawer? _canvasDrawer;
-  private List<Vertex4D>? _vertices;
+    private Canvas2DContext? _context;
+    private BECanvasComponent? _canvasReference;
+    private ICanvasDrawer? _canvasDrawer;
+    private List<Vertex4D>? _originalVertices;
+    private List<Vertex4D>? _rotatedVertices;
 
-  protected override async Task OnAfterRenderAsync(bool firstRender)
-  {
-    if (firstRender)
+    // Auto-implemented properties for angles
+    private double AngleXW
     {
-      _context = await _canvasReference!.CreateCanvas2DAsync();
-      _canvasDrawer = new CanvasDrawer(_context, ProjectionService);
-
-      _vertices = HypercubeGenerator.GenerateVertices();
-      await _canvasDrawer.DrawHypercubeAsync(_vertices, HypercubeGenerator.IsEdge);
+        get => _angleXW;
+        set
+        {
+            _angleXW = value;
+            _ = OnRotationChanged();
+        }
     }
-  }
+
+    private double AngleYW
+    {
+        get => _angleYW;
+        set
+        {
+            _angleYW = value;
+            _ = OnRotationChanged();
+        }
+    }
+
+    private double AngleZW
+    {
+        get => _angleZW;
+        set
+        {
+            _angleZW = value;
+            _ = OnRotationChanged();
+        }
+    }
+
+    private double _angleXW;
+    private double _angleYW;
+    private double _angleZW;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _context = await _canvasReference!.CreateCanvas2DAsync();
+            _canvasDrawer = new CanvasDrawer(_context, ProjectionService);
+
+            _originalVertices = HypercubeGenerator.GenerateVertices();
+            _rotatedVertices = _originalVertices;
+
+            await DrawHypercubeAsync();
+        }
+    }
+
+    private async Task DrawHypercubeAsync()
+    {
+        if (_context == null || _rotatedVertices == null || _canvasDrawer == null) return;
+
+        // Clear the canvas
+        await _context.ClearRectAsync(0, 0, 800, 600);
+
+        // Draw the rotated hypercube
+        await _canvasDrawer.DrawHypercubeAsync(_rotatedVertices, HypercubeGenerator.IsEdge);
+    }
+
+    private async Task OnRotationChanged()
+    {
+        if (_originalVertices == null) return;
+
+        // Rotate the vertices
+        _rotatedVertices = RotationService.RotateVertices(_originalVertices, AngleXW, AngleYW, AngleZW);
+
+        // Re-draw the hypercube
+        await DrawHypercubeAsync();
+    }
 }
