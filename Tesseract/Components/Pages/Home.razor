@@ -1,0 +1,25 @@
+﻿@page "/"
+@inject IHypercubeGenerator HypercubeGenerator
+@inject IProjectionService ProjectionService
+
+<h3>4D Hypercube Visualization</h3>
+<BECanvas Width="800" Height="600" @ref="_canvasReference"></BECanvas>
+
+@code {
+  private Canvas2DContext? _context;
+  private BECanvasComponent? _canvasReference;
+  private ICanvasDrawer? _canvasDrawer;
+  private List<Vertex4D>? _vertices;
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      _context = await _canvasReference!.CreateCanvas2DAsync();
+      _canvasDrawer = new CanvasDrawer(_context, ProjectionService);
+
+      _vertices = HypercubeGenerator.GenerateVertices();
+      await _canvasDrawer.DrawHypercubeAsync(_vertices, HypercubeGenerator.IsEdge);
+    }
+  }
+}
